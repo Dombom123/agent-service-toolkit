@@ -234,15 +234,18 @@ This project includes a `render.yaml` file that makes it easy to deploy to Rende
 4. Connect your GitHub account and select this repository
 5. Render will detect the `render.yaml` and propose to deploy the services defined in it
 6. Configure your environment variables in the Render dashboard:
-   - Add your API keys (e.g., `OPENAI_API_KEY`) 
-   - Set other necessary variables according to your needs
+   - Make sure all required API keys (e.g., `OPENAI_API_KEY`) are set correctly 
+   - Review other variables to ensure they match your needs
 7. Click "Apply" to start the deployment
 
 The deployment will create two web services:
 - **agent-service**: The FastAPI backend service
 - **agent-streamlit-app**: The Streamlit frontend app
 
-The configuration automatically connects these services, with the Streamlit app pointing to the backend service.
+The Streamlit app is automatically configured to connect to the backend service.
+
+#### Note on Environment Variables
+The `render.yaml` file defines environment variables directly within each service rather than using environment groups. This is because Render's Blueprint specification currently has limitations with environment groups that can cause errors like "env group not found in type file.spec".
 
 #### Tips for Render Deployment:
 - Use the "starter" plan for production workloads

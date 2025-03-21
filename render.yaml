@@ -11,29 +11,6 @@ services:
         value: 0.0.0.0
       - key: PORT
         value: 8080
-      - fromGroup: agent-service-env
-    healthCheckPath: /health
-
-  # Frontend service (Streamlit)
-  - type: web
-    name: agent-streamlit-app
-    env: docker
-    dockerfilePath: ./docker/Dockerfile.app
-    dockerContext: .
-    plan: starter
-    envVars:
-      - key: AGENT_URL
-        fromService:
-          name: agent-service
-          type: web
-          property: url
-      - fromGroup: agent-service-env
-    healthCheckPath: /
-
-# Environment variable groups
-envGroups:
-  - name: agent-service-env
-    envVars:
       # API keys for different providers
       - key: OPENAI_API_KEY
         sync: false
@@ -96,4 +73,35 @@ envGroups:
       - key: AZURE_OPENAI_ENDPOINT
         sync: false
       - key: AZURE_OPENAI_API_VERSION
-        value: "2024-10-21" 
+        value: "2024-10-21"
+    healthCheckPath: /health
+
+  # Frontend service (Streamlit)
+  - type: web
+    name: agent-streamlit-app
+    env: docker
+    dockerfilePath: ./docker/Dockerfile.app
+    dockerContext: .
+    plan: starter
+    envVars:
+      - key: AGENT_URL
+        fromService:
+          name: agent-service
+          type: web
+          property: url
+      # API keys for different providers (duplicated for Streamlit app)
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: USE_AWS_BEDROCK
+        value: "false"
+    healthCheckPath: / 
