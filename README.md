@@ -242,10 +242,12 @@ The deployment will create two web services:
 - **agent-service**: The FastAPI backend service
 - **agent-streamlit-app**: The Streamlit frontend app
 
-The Streamlit app is automatically configured to connect to the backend service.
+In the configuration, we manually set the `AGENT_URL` for the Streamlit app to connect to the backend service.
 
-#### Note on Environment Variables
+#### Note on Environment Variables and Service Properties
 The `render.yaml` file defines environment variables directly within each service rather than using environment groups. This is because Render's Blueprint specification currently has limitations with environment groups that can cause errors like "env group not found in type file.spec".
+
+Additionally, the Render Blueprint specification only allows references to specific service properties (`host`, `port`, `hostport`, and `connectionString`), and does not support a direct `url` property. We've set the `AGENT_URL` manually to work around this limitation.
 
 #### Tips for Render Deployment:
 - Use the "starter" plan for production workloads

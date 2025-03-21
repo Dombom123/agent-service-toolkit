@@ -84,11 +84,9 @@ services:
     dockerContext: .
     plan: starter
     envVars:
+      # Set AGENT_URL manually instead of trying to use fromService
       - key: AGENT_URL
-        fromService:
-          name: agent-service
-          type: web
-          property: url
+        value: https://agent-service.onrender.com
       # API keys for different providers (duplicated for Streamlit app)
       - key: OPENAI_API_KEY
         sync: false
