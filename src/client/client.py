@@ -372,14 +372,14 @@ class AgentClient:
         Update a prompt template.
         
         Args:
-            prompt_id (str): The ID of the prompt to update.
-            content (str): The new content for the prompt.
+            prompt_id (str): The ID of the prompt to update
+            content (str): The new content for the prompt
             
         Returns:
-            Prompt: The updated prompt.
+            Prompt: The updated prompt
         """
-        request = UpdatePromptRequest(id=prompt_id, content=content)
         try:
+            request = UpdatePromptRequest(prompt_id=prompt_id, content=content)
             response = httpx.post(
                 f"{self.base_url}/prompts/update",
                 json=request.model_dump(),
@@ -387,7 +387,6 @@ class AgentClient:
                 timeout=self.timeout,
             )
             response.raise_for_status()
+            return Prompt.model_validate(response.json())
         except httpx.HTTPError as e:
             raise AgentClientError(f"Error updating prompt: {e}")
-        
-        return Prompt.model_validate(response.json())

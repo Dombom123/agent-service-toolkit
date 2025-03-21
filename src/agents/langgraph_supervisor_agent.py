@@ -3,6 +3,7 @@ from langgraph.prebuilt import create_react_agent
 from langgraph_supervisor import create_supervisor
 
 from core import get_model, settings
+from service.prompts import get_prompt
 
 model = get_model(settings.DEFAULT_MODEL)
 
@@ -28,30 +29,39 @@ def web_search(query: str) -> str:
         "5. **Google (Alphabet)**: 181,269 employees."
     )
 
+# Load prompts from store or use defaults
+math_prompt = get_prompt("langgraph_supervisor_agent_prompt_1")
+math_prompt_text = math_prompt.content if math_prompt else "You are a math expert. Always use one tool at a time."
+
+research_prompt = get_prompt("langgraph_supervisor_agent_prompt_2")
+research_prompt_text = research_prompt.content if research_prompt else "You are a world class researcher with access to web search. Do not do any math."
+
+supervisor_prompt = get_prompt("langgraph_supervisor_agent_prompt_3")
+supervisor_prompt_text = supervisor_prompt.content if supervisor_prompt else (
+    "You are a team supervisor managing a research expert and a math expert. "
+    "For current events, use research_agent. "
+    "For math problems, use math_agent."
+)
 
 math_agent = create_react_agent(
     model=model,
     tools=[add, multiply],
     name="math_expert",
-    prompt="You are a math expert. Always use one tool at a time.",
+    prompt=math_prompt_text,
 ).with_config(tags=["skip_stream"])
 
 research_agent = create_react_agent(
     model=model,
     tools=[web_search],
     name="research_expert",
-    prompt="You are a world class researcher with access to web search. Do not do any math.",
+    prompt=research_prompt_text,
 ).with_config(tags=["skip_stream"])
 
 # Create supervisor workflow
 workflow = create_supervisor(
     [research_agent, math_agent],
     model=model,
-    prompt=(
-        "You are a team supervisor managing a research expert and a math expert. "
-        "For current events, use research_agent. "
-        "For math problems, use math_agent."
-    ),
+    prompt=supervisor_prompt_text,
     add_handoff_back_messages=False,
 )
 

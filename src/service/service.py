@@ -359,26 +359,18 @@ async def list_prompts() -> PromptList:
 async def update_prompt_endpoint(request: UpdatePromptRequest) -> Prompt:
     """Update a prompt template."""
     try:
-        success = update_prompt(request.id, request.content)
-        if not success:
-            raise HTTPException(status_code=404, detail=f"Prompt with ID {request.id} not found")
-        
-        # Get the updated prompt
-        prompts = get_prompts()
-        for prompt in prompts:
-            if prompt.id == request.id:
-                return prompt
-        
-        # This should not happen if update_prompt returned True
-        raise HTTPException(status_code=500, detail="Unexpected error updating prompt")
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
+        updated_prompt = update_prompt(request.prompt_id, request.content)
+        if updated_prompt:
+            return updated_prompt
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Prompt with ID {request.prompt_id} not found.",
+            )
     except Exception as e:
-        logger.error(f"Error updating prompt: {e}")
         raise HTTPException(
             status_code=500,
-            detail="Error updating prompt. Please check server logs for details."
+            detail=f"Error updating prompt: {str(e)}",
         )
 
 

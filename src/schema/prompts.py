@@ -17,5 +17,5 @@ class PromptList(BaseModel):
 
 class UpdatePromptRequest(BaseModel):
     """Schema for updating a prompt."""
-    id: str
+    prompt_id: str
     content: str 

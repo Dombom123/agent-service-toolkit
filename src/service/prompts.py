@@ -1,10 +1,11 @@
 """Prompt management module."""
 import importlib
 import inspect
+import json
 import logging
 import os
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from langchain.prompts import SystemMessagePromptTemplate
 from langchain_core.prompts import PromptTemplate
@@ -14,9 +15,58 @@ from schema.prompts import Prompt
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Path to the prompt store JSON file
+PROMPT_STORE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "prompt_store.json")
+
 # Dictionary to store prompt templates
 _prompt_templates: Dict[str, str] = {}
 
+def _ensure_data_dir():
+    """Ensure the data directory exists."""
+    data_dir = os.path.dirname(PROMPT_STORE_PATH)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+def _load_from_store() -> Dict[str, Prompt]:
+    """Load prompts from the store file."""
+    _ensure_data_dir()
+    
+    if not os.path.exists(PROMPT_STORE_PATH):
+        return {}
+    
+    try:
+        with open(PROMPT_STORE_PATH, 'r') as f:
+            data = json.load(f)
+            prompts = {}
+            for item in data:
+                prompt = Prompt(**item)
+                prompts[prompt.id] = prompt
+            return prompts
+    except Exception as e:
+        logger.error(f"Error loading prompts from store: {str(e)}")
+        return {}
+
+def _save_to_store(prompts: List[Prompt]):
+    """Save prompts to the store file."""
+    _ensure_data_dir()
+    
+    try:
+        data = [prompt.dict() for prompt in prompts]
+        with open(PROMPT_STORE_PATH, 'w') as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Saved {len(prompts)} prompts to store")
+    except Exception as e:
+        logger.error(f"Error saving prompts to store: {str(e)}")
+
+def _initialize_store():
+    """Initialize the prompt store with prompts from the codebase if it doesn't exist."""
+    if not os.path.exists(PROMPT_STORE_PATH):
+        logger.info("Initializing prompt store from codebase")
+        prompts = scan_codebase_for_prompts()
+        if prompts:
+            _save_to_store(prompts)
+            return True
+    return False
 
 def scan_codebase_for_prompts() -> List[Prompt]:
     """Scan the codebase for prompt templates and return them as Prompt objects."""
@@ -156,12 +206,22 @@ def scan_codebase_for_prompts() -> List[Prompt]:
 
 
 def get_prompts() -> List[Prompt]:
-    """Get all prompts from the codebase."""
+    """Get all prompts from the store or scan codebase if store is empty."""
     try:
-        if not _prompt_templates:
-            scan_codebase_for_prompts()
+        # First try to load from the store
+        store_prompts = _load_from_store()
         
-        # If we have templates, convert them to Prompt objects
+        if store_prompts:
+            return list(store_prompts.values())
+        
+        # If store is empty, scan codebase and initialize store
+        if not _prompt_templates:
+            prompts = scan_codebase_for_prompts()
+            if prompts:
+                _save_to_store(prompts)
+            return prompts
+        
+        # If we already have templates in memory, convert them to Prompt objects
         prompts = []
         for prompt_id, template in _prompt_templates.items():
             try:
@@ -191,175 +251,95 @@ def get_prompts() -> List[Prompt]:
         # Return an empty list instead of raising an exception
         return []
 
+def get_prompt(prompt_id: str) -> Optional[Prompt]:
+    """Get a specific prompt by ID."""
+    store_prompts = _load_from_store()
+    
+    if prompt_id in store_prompts:
+        return store_prompts[prompt_id]
+    
+    # If not found in store, try to find it in memory
+    prompts = get_prompts()
+    for prompt in prompts:
+        if prompt.id == prompt_id:
+            return prompt
+    
+    return None
 
-def update_prompt(prompt_id: str, content: str) -> bool:
-    """Update a prompt template by modifying the source file.
+def update_prompt(prompt_id: str, content: str) -> Optional[Prompt]:
+    """Update a prompt in the store.
     
     Args:
         prompt_id: The ID of the prompt to update
         content: The new content for the prompt
         
     Returns:
-        bool: True if the update was successful, False otherwise
+        Optional[Prompt]: The updated prompt or None if update failed
     """
     try:
         logger.info(f"Updating prompt with ID: {prompt_id}")
-        # First make sure the prompt exists in our cache
-        if prompt_id not in _prompt_templates:
-            # If the cache is empty, try scanning for prompts first
+        
+        # Load all prompts from the store
+        store_prompts = _load_from_store()
+        
+        # If store is empty, initialize it first
+        if not store_prompts:
+            prompts = scan_codebase_for_prompts()
+            if prompts:
+                _save_to_store(prompts)
+                store_prompts = {p.id: p for p in prompts}
+        
+        # Update the prompt in the store
+        if prompt_id in store_prompts:
+            prompt = store_prompts[prompt_id]
+            prompt.content = content
+            _save_to_store(list(store_prompts.values()))
+            
+            # Also update in memory
+            _prompt_templates[prompt_id] = content
+            
+            logger.info(f"Updated prompt {prompt_id} in store")
+            return prompt
+        else:
+            logger.warning(f"Prompt with ID {prompt_id} not found in store")
+            
+            # If not in store, also scan the codebase again to ensure it's not missing
             if not _prompt_templates:
                 scan_codebase_for_prompts()
             
-            # Check again after scanning
-            if prompt_id not in _prompt_templates:
-                logger.warning(f"Prompt with ID {prompt_id} not found in cache")
-                return False
-        
-        # Store in memory first
-        _prompt_templates[prompt_id] = content
-        
-        # Parse the prompt_id to get the agent_id and name
-        parts = prompt_id.split("_", 1)
-        if len(parts) != 2:
-            logger.warning(f"Invalid prompt_id format: {prompt_id}")
-            return False
-        
-        agent_id, name = parts
-        
-        # For prompt_N formats, extract the name according to the pattern
-        # For langgraph_supervisor_agent_prompt_1, name is actually prompt_1
-        if agent_id == "langgraph" and name.startswith("supervisor_agent_prompt_"):
-            # For langgraph supervisor agent, special handling
-            prompt_num = name.split("_")[-1]
-            name = f"prompt_{prompt_num}"
-            agent_id = "langgraph_supervisor_agent"
-        
-        # Determine the file path
-        agent_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "agents")
-        agent_file = os.path.join(agent_dir, f"{agent_id}.py")
-        
-        if not os.path.exists(agent_file):
-            logger.warning(f"Agent file not found: {agent_file}. Checking for alternate filenames.")
-            # Try to find a file that matches a part of the agent_id
-            for filename in os.listdir(agent_dir):
-                if filename.endswith(".py") and agent_id in filename:
-                    agent_file = os.path.join(agent_dir, filename)
-                    logger.info(f"Found alternate agent file: {agent_file}")
-                    break
-            
-            if not os.path.exists(agent_file):
-                logger.warning(f"No suitable agent file found for {agent_id}")
-                return False
-        
-        logger.info(f"Updating prompt in file: {agent_file}")
-        
-        # Read the source file
-        with open(agent_file, 'r') as f:
-            source = f.read()
-        
-        # Create a backup before making changes
-        backup_file = f"{agent_file}.bak"
-        with open(backup_file, 'w') as f:
-            f.write(source)
-        
-        # Look for different patterns of prompt definition and replace the content
-        updated = False
-        
-        # Pattern 1: SystemMessagePromptTemplate.from_template with triple quotes
-        pattern1 = rf'{re.escape(name)} = SystemMessagePromptTemplate\.from_template\("""(.*?)"""\)'
-        if re.search(pattern1, source, re.DOTALL):
-            new_source = re.sub(
-                pattern1,
-                f'{name} = SystemMessagePromptTemplate.from_template("""{content}""")',
-                source,
-                flags=re.DOTALL
-            )
-            updated = True
-        
-        # Pattern 2: SystemMessagePromptTemplate.from_template with single quotes
-        if not updated:
-            pattern2 = rf"{re.escape(name)} = SystemMessagePromptTemplate\.from_template\('''(.*?)'''\)"
-            if re.search(pattern2, source, re.DOTALL):
-                new_source = re.sub(
-                    pattern2,
-                    f"{name} = SystemMessagePromptTemplate.from_template('''{content}''')",
-                    source,
-                    flags=re.DOTALL
+            # Still need to check if it exists in memory
+            if prompt_id in _prompt_templates:
+                # Create a new prompt object
+                parts = prompt_id.split("_", 1)
+                if len(parts) == 2:
+                    agent_id, name = parts
+                else:
+                    agent_id = "unknown"
+                    name = prompt_id
+                
+                prompt = Prompt(
+                    id=prompt_id,
+                    name=name,
+                    content=content,
+                    description=f"Prompt for {name} in {agent_id}",
+                    agent_id=agent_id,
                 )
-                updated = True
-        
-        # Pattern 3: prompt="""...""" or prompt="..."
-        if not updated:
-            # For simple name-based prompts like prompt_1, look for keyword arguments
-            if name.startswith("prompt_"):
-                # Triple quoted strings
-                pattern3a = r'prompt\s*=\s*"""(.*?)"""'
-                matches = list(re.finditer(pattern3a, source, re.DOTALL))
-                if matches:
-                    # Find the nth occurrence of the pattern (based on the prompt number)
-                    try:
-                        idx = int(name.split("_")[1]) - 1
-                        if idx < len(matches):
-                            # Replace just this occurrence
-                            match = matches[idx]
-                            new_source = source[:match.start(1)] + content + source[match.end(1):]
-                            updated = True
-                    except (ValueError, IndexError):
-                        pass
                 
-                # Double quoted strings
-                if not updated:
-                    pattern3b = r'prompt\s*=\s*"([^"]*)"'
-                    matches = list(re.finditer(pattern3b, source))
-                    if matches:
-                        try:
-                            idx = int(name.split("_")[1]) - 1
-                            if idx < len(matches):
-                                match = matches[idx]
-                                new_source = source[:match.start(1)] + content + source[match.end(1):]
-                                updated = True
-                        except (ValueError, IndexError):
-                            pass
+                # Update in memory
+                _prompt_templates[prompt_id] = content
                 
-                # Single quoted strings
-                if not updated:
-                    pattern3c = r"prompt\s*=\s*'([^']*)'"
-                    matches = list(re.finditer(pattern3c, source))
-                    if matches:
-                        try:
-                            idx = int(name.split("_")[1]) - 1
-                            if idx < len(matches):
-                                match = matches[idx]
-                                new_source = source[:match.start(1)] + content + source[match.end(1):]
-                                updated = True
-                        except (ValueError, IndexError):
-                            pass
-        
-        # Pattern 4: Multi-line prompts with parentheses: prompt=("""...""")
-        if not updated and name.startswith("prompt_"):
-            pattern4 = r'prompt\s*=\s*\(\s*"""(.*?)"""\s*\)'
-            matches = list(re.finditer(pattern4, source, re.DOTALL))
-            if matches:
-                try:
-                    idx = int(name.split("_")[1]) - 1
-                    if idx < len(matches):
-                        match = matches[idx]
-                        new_source = source[:match.start(1)] + content + source[match.end(1):]
-                        updated = True
-                except (ValueError, IndexError):
-                    pass
-        
-        # If we found and updated a pattern, write the file
-        if updated:
-            with open(agent_file, 'w') as f:
-                f.write(new_source)
-            logger.info(f"Updated prompt {prompt_id} in file {agent_file}")
-            return True
-        else:
-            logger.warning(f"Could not find prompt pattern for {prompt_id} in {agent_file}")
-            # Even if we couldn't update the file, keep the value in memory
-            return True
+                # Add to store
+                store_prompts[prompt_id] = prompt
+                _save_to_store(list(store_prompts.values()))
+                
+                logger.info(f"Added new prompt {prompt_id} to store")
+                return prompt
+            
+            return None
             
     except Exception as e:
         logger.error(f"Error updating prompt {prompt_id}: {str(e)}")
-        return False 
+        return None
+
+# Call initialize store at module load time
+_initialize_store() 
