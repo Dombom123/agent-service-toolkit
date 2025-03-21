@@ -1,5 +1,4 @@
 from schema.models import AllModelEnum
-from schema.prompts import Prompt, PromptList, UpdatePromptRequest
 from schema.schema import (
     AgentInfo,
     ChatHistory,
@@ -23,7 +22,4 @@ __all__ = [
     "FeedbackResponse",
     "ChatHistoryInput",
     "ChatHistory",
-    "Prompt",
-    "PromptList",
-    "UpdatePromptRequest",
 ]

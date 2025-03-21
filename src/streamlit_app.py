@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 from client import AgentClient, AgentClientError
-from schema import ChatHistory, ChatMessage, Prompt
+from schema import ChatHistory, ChatMessage
 from schema.task_data import TaskData, TaskDataStatus
 
 # A Streamlit app for interacting with the langgraph agent via a simple chat interface.
@@ -23,8 +23,8 @@ from schema.task_data import TaskData, TaskDataStatus
 # The app heavily uses AgentClient to interact with the agent's FastAPI endpoints.
 
 
-APP_TITLE = "Agents für TOG"
-APP_ICON = "🚀"
+APP_TITLE = "Agent Service Toolkit"
+APP_ICON = "🧰"
 
 
 async def main() -> None:
@@ -80,24 +80,12 @@ async def main() -> None:
                 messages = []
         st.session_state.messages = messages
         st.session_state.thread_id = thread_id
-        
-    # Initialize prompts in session state if not present
-    if "prompts" not in st.session_state:
-        try:
-            st.session_state.prompts = agent_client.get_prompts().prompts
-        except Exception as e:
-            st.warning(f"Could not load prompts: {e}")
-            st.session_state.prompts = []
-    
-    # Initialize the selected prompt
-    if "selected_prompt" not in st.session_state:
-        st.session_state.selected_prompt = None
 
     # Config options
     with st.sidebar:
         st.header(f"{APP_ICON} {APP_TITLE}")
         ""
-        "AI assistant built with LangGraph, FastAPI and Streamlit"
+        "Full toolkit for running an AI agent service built with LangGraph, FastAPI and Streamlit"
         with st.popover(":material/settings: Settings", use_container_width=True):
             model_idx = agent_client.info.models.index(agent_client.info.default_model)
             model = st.selectbox("LLM to use", options=agent_client.info.models, index=model_idx)
@@ -109,20 +97,23 @@ async def main() -> None:
                 index=agent_idx,
             )
             use_streaming = st.toggle("Stream results", value=True)
-            
-            st.divider()
-            
-            if st.button(":material/edit: Edit Prompts", use_container_width=True):
-                # Refresh prompts list
-                try:
-                    st.session_state.prompts = agent_client.get_prompts().prompts
-                except Exception as e:
-                    st.warning(f"Could not load prompts: {e}")
-                edit_prompts_dialog()
+
+        @st.dialog("Architecture")
+        def architecture_dialog() -> None:
+            st.image(
+                "https://github.com/JoshuaC215/agent-service-toolkit/blob/main/media/agent_architecture.png?raw=true"
+            )
+            "[View full size on Github](https://github.com/JoshuaC215/agent-service-toolkit/blob/main/media/agent_architecture.png)"
+            st.caption(
+                "App hosted on [Streamlit Cloud](https://share.streamlit.io/) with FastAPI service running in [Azure](https://learn.microsoft.com/en-us/azure/app-service/)"
+            )
+
+        if st.button(":material/schema: Architecture", use_container_width=True):
+            architecture_dialog()
 
         with st.popover(":material/policy: Privacy", use_container_width=True):
             st.write(
-                "Prompts, responses and feedback in this app are anonymously recorded for service improvement purposes only."
+                "Prompts, responses and feedback in this app are anonymously recorded and saved to LangSmith for product evaluation and improvement purposes only."
             )
 
         @st.dialog("Share/resume chat")
@@ -140,92 +131,11 @@ async def main() -> None:
 
         if st.button(":material/upload: Share/resume chat", use_container_width=True):
             share_chat_dialog()
-            
-        @st.dialog("Edit Prompts")
-        def edit_prompts_dialog() -> None:
-            st.subheader("Edit Agent Prompts")
-            
-            # Try to refresh prompts when dialog opens
-            try:
-                refreshed_prompts = agent_client.get_prompts().prompts
-                if refreshed_prompts:
-                    st.session_state.prompts = refreshed_prompts
-            except Exception as e:
-                st.warning(f"Could not refresh prompts: {e}")
-            
-            # If we have prompts, show a selector for them
-            if st.session_state.prompts:
-                # Group prompts by agent ID
-                agents = {}
-                for prompt in st.session_state.prompts:
-                    if prompt.agent_id not in agents:
-                        agents[prompt.agent_id] = []
-                    agents[prompt.agent_id].append(prompt)
-                
-                # Agent selector
-                agent_names = list(agents.keys())
-                selected_agent = st.selectbox("Select Agent", agent_names)
-                
-                # Prompt selector for the selected agent
-                agent_prompts = agents[selected_agent]
-                prompt_names = [p.name for p in agent_prompts]
-                selected_prompt_name = st.selectbox("Select Prompt", prompt_names)
-                
-                # Find the selected prompt
-                selected_prompt = next(p for p in agent_prompts if p.name == selected_prompt_name)
-                st.session_state.selected_prompt = selected_prompt
-                
-                # Show the prompt editor
-                st.text_area(
-                    "Edit Prompt", 
-                    value=selected_prompt.content, 
-                    height=300, 
-                    key="prompt_editor"
-                )
-                
-                with st.expander("Prompt Update Information"):
-                    st.info("""
-                    **Changes to prompts are saved to disk and will persist between service restarts.**
-                    
-                    Your changes will be immediately available to new interactions with the agent.
-                    When you save changes, the agent will be reloaded automatically with the new prompt.
-                    
-                    Editing prompts allows you to customize how agents behave without changing the code.
-                    """)
-                
-                reload_agent = st.checkbox("Reload agent after update", value=True, 
-                                          help="Reload the agent to use the new prompt immediately")
-                
-                if st.button("Save Changes"):
-                    try:
-                        # Update the prompt
-                        updated_prompt = agent_client.update_prompt(
-                            selected_prompt.id, 
-                            st.session_state.prompt_editor
-                        )
-                        
-                        # Update the prompt in the session state
-                        for i, prompt in enumerate(st.session_state.prompts):
-                            if prompt.id == updated_prompt.id:
-                                st.session_state.prompts[i] = updated_prompt
-                                break
-                                
-                        success_message = "Prompt updated successfully! Your changes have been saved to disk and will persist between service restarts."
-                        
-                        # If selected, reload the agent
-                        if reload_agent:
-                            try:
-                                agent_client.reload_agent(selected_agent)
-                                success_message += " Agent has been reloaded with the new prompt."
-                            except Exception as e:
-                                st.warning(f"Prompt was updated but agent reload failed: {e}")
-                                
-                        st.success(success_message)
-                    except Exception as e:
-                        st.error(f"Error updating prompt: {e}")
-            else:
-                st.info("No prompts available. This could be because the backend service couldn't find any prompt templates in the agents directory, or there was an error loading them.")
-                st.warning("You may need to check the agent service logs for more details.")
+
+        "[View the source code](https://github.com/JoshuaC215/agent-service-toolkit)"
+        st.caption(
+            "Made with :material/favorite: by [Joshua](https://www.linkedin.com/in/joshua-k-carroll/) in Oakland"
+        )
 
     # Draw existing messages
     messages: list[ChatMessage] = st.session_state.messages

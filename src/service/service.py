@@ -16,23 +16,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Command, Interrupt
 from langsmith import Client as LangsmithClient
 
-# Try to import reload_agent, but don't fail if it's not available
-try:
-    from agents import DEFAULT_AGENT, get_agent, get_all_agent_info, reload_agent
-    HAS_RELOAD_AGENT = True
-except ImportError:
-    from agents import DEFAULT_AGENT, get_agent, get_all_agent_info
-    HAS_RELOAD_AGENT = False
-    
-    # Dummy function that logs a warning
-    def reload_agent(agent_id: str) -> bool:
-        """
-        Dummy reload_agent function that just logs a warning.
-        """
-        logger = logging.getLogger(__name__)
-        logger.warning(f"reload_agent not available, agent {agent_id} will not be reloaded")
-        return False
-
+from agents import DEFAULT_AGENT, get_agent, get_all_agent_info
 from core import settings
 from memory import initialize_database
 from schema import (
@@ -41,14 +25,10 @@ from schema import (
     ChatMessage,
     Feedback,
     FeedbackResponse,
-    Prompt,
-    PromptList,
     ServiceMetadata,
     StreamInput,
-    UpdatePromptRequest,
     UserInput,
 )
-from service.prompts import get_prompts, update_prompt
 from service.utils import (
     convert_message_content_to_string,
     langchain_to_chat_message,
@@ -90,7 +70,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         raise
 
 
-app = FastAPI(lifespan=lifespan, debug=True)
+app = FastAPI(lifespan=lifespan)
 router = APIRouter(dependencies=[Depends(verify_bearer)])
 
 
@@ -355,73 +335,6 @@ def history(input: ChatHistoryInput) -> ChatHistory:
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok"}
-
-
-@router.get("/prompts")
-async def list_prompts() -> PromptList:
-    """Get all available prompts."""
-    try:
-        prompts = get_prompts()
-        return PromptList(prompts=prompts)
-    except Exception as e:
-        logger.error(f"Error retrieving prompts: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Error retrieving prompts. Please check server logs for details."
-        )
-
-
-@router.post("/prompts/update")
-async def update_prompt_endpoint(request: UpdatePromptRequest) -> Prompt:
-    """Update a prompt template."""
-    try:
-        updated_prompt = update_prompt(request.prompt_id, request.content)
-        if updated_prompt:
-            # Try to reload the agent if the prompt belongs to it and reload is available
-            if updated_prompt.agent_id in [a.key for a in get_all_agent_info()] and HAS_RELOAD_AGENT:
-                try:
-                    logger.info(f"Reloading agent {updated_prompt.agent_id} after prompt update")
-                    reload_agent(updated_prompt.agent_id)
-                except Exception as e:
-                    logger.warning(f"Failed to reload agent {updated_prompt.agent_id}: {e}")
-            return updated_prompt
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Prompt with ID {request.prompt_id} not found.",
-            )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error updating prompt: {str(e)}",
-        )
-
-
-@router.post("/agents/{agent_id}/reload")
-async def reload_agent_endpoint(agent_id: str) -> dict:
-    """Reload an agent to pick up prompt changes."""
-    try:
-        if agent_id not in [a.key for a in get_all_agent_info()]:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Agent {agent_id} not found.",
-            )
-            
-        success = reload_agent(agent_id)
-        if success:
-            return {"status": "success", "message": f"Agent {agent_id} reloaded successfully"}
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to reload agent {agent_id}. Check logs for details.",
-            )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error reloading agent: {str(e)}",
-        )
 
 
 app.include_router(router)
