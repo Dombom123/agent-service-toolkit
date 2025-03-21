@@ -390,3 +390,24 @@ class AgentClient:
             return Prompt.model_validate(response.json())
         except httpx.HTTPError as e:
             raise AgentClientError(f"Error updating prompt: {e}")
+            
+    def reload_agent(self, agent_id: str) -> dict:
+        """
+        Reload an agent to pick up prompt changes.
+        
+        Args:
+            agent_id (str): The ID of the agent to reload
+            
+        Returns:
+            dict: Status message about the reload
+        """
+        try:
+            response = httpx.post(
+                f"{self.base_url}/agents/{agent_id}/reload",
+                headers=self._headers,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            raise AgentClientError(f"Error reloading agent: {e}")

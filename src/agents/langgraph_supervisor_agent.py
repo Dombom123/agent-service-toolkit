@@ -29,40 +29,61 @@ def web_search(query: str) -> str:
         "5. **Google (Alphabet)**: 181,269 employees."
     )
 
-# Load prompts from store or use defaults
-math_prompt = get_prompt("langgraph_supervisor_agent_prompt_1")
-math_prompt_text = math_prompt.content if math_prompt else "You are a math expert. Always use one tool at a time."
 
-research_prompt = get_prompt("langgraph_supervisor_agent_prompt_2")
-research_prompt_text = research_prompt.content if research_prompt else "You are a world class researcher with access to web search. Do not do any math."
+def get_math_prompt():
+    """Get the math agent prompt dynamically."""
+    prompt = get_prompt("langgraph-supervisor-agent_prompt_1")
+    if prompt:
+        return prompt.content
+    return "You are a math expert. Always use one tool at a time."
 
-supervisor_prompt = get_prompt("langgraph_supervisor_agent_prompt_3")
-supervisor_prompt_text = supervisor_prompt.content if supervisor_prompt else (
-    "You are a team supervisor managing a research expert and a math expert. "
-    "For current events, use research_agent. "
-    "For math problems, use math_agent."
-)
 
-math_agent = create_react_agent(
-    model=model,
-    tools=[add, multiply],
-    name="math_expert",
-    prompt=math_prompt_text,
-).with_config(tags=["skip_stream"])
+def get_research_prompt():
+    """Get the research agent prompt dynamically."""
+    prompt = get_prompt("langgraph-supervisor-agent_prompt_2")
+    if prompt:
+        return prompt.content
+    return "You are a world class researcher with access to web search. Do not do any math."
 
-research_agent = create_react_agent(
-    model=model,
-    tools=[web_search],
-    name="research_expert",
-    prompt=research_prompt_text,
-).with_config(tags=["skip_stream"])
 
-# Create supervisor workflow
-workflow = create_supervisor(
-    [research_agent, math_agent],
-    model=model,
-    prompt=supervisor_prompt_text,
-    add_handoff_back_messages=False,
-)
+def get_supervisor_prompt():
+    """Get the supervisor prompt dynamically."""
+    prompt = get_prompt("langgraph-supervisor-agent_prompt_3")
+    if prompt:
+        return prompt.content
+    return (
+        "You are a team supervisor managing a research expert and a math expert. "
+        "For current events, use research_agent. "
+        "For math problems, use math_agent."
+    )
 
-langgraph_supervisor_agent = workflow.compile(checkpointer=MemorySaver())
+
+def create_supervisor_agent():
+    """Create the supervisor agent with the latest prompts."""
+    math_agent = create_react_agent(
+        model=model,
+        tools=[add, multiply],
+        name="math_expert",
+        prompt=get_math_prompt(),
+    ).with_config(tags=["skip_stream"])
+
+    research_agent = create_react_agent(
+        model=model,
+        tools=[web_search],
+        name="research_expert",
+        prompt=get_research_prompt(),
+    ).with_config(tags=["skip_stream"])
+
+    # Create supervisor workflow
+    workflow = create_supervisor(
+        [research_agent, math_agent],
+        model=model,
+        prompt=get_supervisor_prompt(),
+        add_handoff_back_messages=False,
+    )
+
+    return workflow.compile(checkpointer=MemorySaver())
+
+
+# Create the agent with the current prompts
+langgraph_supervisor_agent = create_supervisor_agent()

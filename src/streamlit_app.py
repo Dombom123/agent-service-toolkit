@@ -109,6 +109,16 @@ async def main() -> None:
                 index=agent_idx,
             )
             use_streaming = st.toggle("Stream results", value=True)
+            
+            st.divider()
+            
+            if st.button(":material/edit: Edit Prompts", use_container_width=True):
+                # Refresh prompts list
+                try:
+                    st.session_state.prompts = agent_client.get_prompts().prompts
+                except Exception as e:
+                    st.warning(f"Could not load prompts: {e}")
+                edit_prompts_dialog()
 
         with st.popover(":material/policy: Privacy", use_container_width=True):
             st.write(
@@ -177,38 +187,45 @@ async def main() -> None:
                     st.info("""
                     **Changes to prompts are saved to disk and will persist between service restarts.**
                     
-                    Depending on the agent implementation, changes to prompts may require a restart of the agent 
-                    or a new conversation to take effect.
+                    Your changes will be immediately available to new interactions with the agent.
+                    When you save changes, the agent will be reloaded automatically with the new prompt.
                     
                     Editing prompts allows you to customize how agents behave without changing the code.
                     """)
                 
+                reload_agent = st.checkbox("Reload agent after update", value=True, 
+                                          help="Reload the agent to use the new prompt immediately")
+                
                 if st.button("Save Changes"):
                     try:
+                        # Update the prompt
                         updated_prompt = agent_client.update_prompt(
                             selected_prompt.id, 
                             st.session_state.prompt_editor
                         )
+                        
                         # Update the prompt in the session state
                         for i, prompt in enumerate(st.session_state.prompts):
                             if prompt.id == updated_prompt.id:
                                 st.session_state.prompts[i] = updated_prompt
                                 break
-                        st.success("Prompt updated successfully! Your changes have been saved to disk and will persist between service restarts.")
+                                
+                        success_message = "Prompt updated successfully! Your changes have been saved to disk and will persist between service restarts."
+                        
+                        # If selected, reload the agent
+                        if reload_agent:
+                            try:
+                                agent_client.reload_agent(selected_agent)
+                                success_message += " Agent has been reloaded with the new prompt."
+                            except Exception as e:
+                                st.warning(f"Prompt was updated but agent reload failed: {e}")
+                                
+                        st.success(success_message)
                     except Exception as e:
                         st.error(f"Error updating prompt: {e}")
             else:
                 st.info("No prompts available. This could be because the backend service couldn't find any prompt templates in the agents directory, or there was an error loading them.")
                 st.warning("You may need to check the agent service logs for more details.")
-        
-        # Add the Edit Prompts button
-        if st.button(":material/edit: Edit Prompts", use_container_width=True):
-            # Refresh prompts list
-            try:
-                st.session_state.prompts = agent_client.get_prompts().prompts
-            except Exception as e:
-                st.warning(f"Could not load prompts: {e}")
-            edit_prompts_dialog()
 
     # Draw existing messages
     messages: list[ChatMessage] = st.session_state.messages
