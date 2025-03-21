@@ -86,7 +86,7 @@ services:
     envVars:
       # Set AGENT_URL manually instead of trying to use fromService
       - key: AGENT_URL
-        value: https://agent-service.onrender.com
+        value: https://agent-service-w0w3.onrender.com
       # API keys for different providers (duplicated for Streamlit app)
       - key: OPENAI_API_KEY
         sync: false
