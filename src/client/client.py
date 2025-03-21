@@ -10,8 +10,11 @@ from schema import (
     ChatHistoryInput,
     ChatMessage,
     Feedback,
+    Prompt,
+    PromptList,
     ServiceMetadata,
     StreamInput,
+    UpdatePromptRequest,
     UserInput,
 )
 
@@ -344,3 +347,47 @@ class AgentClient:
             raise AgentClientError(f"Error: {e}")
 
         return ChatHistory.model_validate(response.json())
+
+    def get_prompts(self) -> PromptList:
+        """
+        Get all available prompts.
+        
+        Returns:
+            PromptList: The list of available prompts.
+        """
+        try:
+            response = httpx.get(
+                f"{self.base_url}/prompts",
+                headers=self._headers,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as e:
+            raise AgentClientError(f"Error getting prompts: {e}")
+        
+        return PromptList.model_validate(response.json())
+    
+    def update_prompt(self, prompt_id: str, content: str) -> Prompt:
+        """
+        Update a prompt template.
+        
+        Args:
+            prompt_id (str): The ID of the prompt to update.
+            content (str): The new content for the prompt.
+            
+        Returns:
+            Prompt: The updated prompt.
+        """
+        request = UpdatePromptRequest(id=prompt_id, content=content)
+        try:
+            response = httpx.post(
+                f"{self.base_url}/prompts/update",
+                json=request.model_dump(),
+                headers=self._headers,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as e:
+            raise AgentClientError(f"Error updating prompt: {e}")
+        
+        return Prompt.model_validate(response.json())
