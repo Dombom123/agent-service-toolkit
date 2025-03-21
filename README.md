@@ -221,3 +221,31 @@ Contributions are welcome! Please feel free to submit a Pull Request. Currently 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Deployment
+
+### Deploying to Render.com
+
+This project includes a `render.yaml` file that makes it easy to deploy to Render.com:
+
+1. Create a Render.com account if you don't have one: https://render.com/
+2. Fork or clone this repository to your GitHub account
+3. On Render's dashboard, click "New" and select "Blueprint"
+4. Connect your GitHub account and select this repository
+5. Render will detect the `render.yaml` and propose to deploy the services defined in it
+6. Configure your environment variables in the Render dashboard:
+   - Add your API keys (e.g., `OPENAI_API_KEY`) 
+   - Set other necessary variables according to your needs
+7. Click "Apply" to start the deployment
+
+The deployment will create two web services:
+- **agent-service**: The FastAPI backend service
+- **agent-streamlit-app**: The Streamlit frontend app
+
+The configuration automatically connects these services, with the Streamlit app pointing to the backend service.
+
+#### Tips for Render Deployment:
+- Use the "starter" plan for production workloads
+- Monitor your usage to avoid unexpected costs
+- Set appropriate scaling parameters for your expected traffic
+- Keep your API keys and secrets secure in the Render dashboard, never commit them to your repository

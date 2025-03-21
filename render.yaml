@@ -1,0 +1,99 @@
+services:
+  # Backend service (FastAPI)
+  - type: web
+    name: agent-service
+    env: docker
+    dockerfilePath: ./docker/Dockerfile.service
+    dockerContext: .
+    plan: starter
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8080
+      - fromGroup: agent-service-env
+    healthCheckPath: /health
+
+  # Frontend service (Streamlit)
+  - type: web
+    name: agent-streamlit-app
+    env: docker
+    dockerfilePath: ./docker/Dockerfile.app
+    dockerContext: .
+    plan: starter
+    envVars:
+      - key: AGENT_URL
+        fromService:
+          name: agent-service
+          type: web
+          property: url
+      - fromGroup: agent-service-env
+    healthCheckPath: /
+
+# Environment variable groups
+envGroups:
+  - name: agent-service-env
+    envVars:
+      # API keys for different providers
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: USE_AWS_BEDROCK
+        value: "false"
+      
+      # Default model configuration
+      - key: DEFAULT_MODEL
+        value: ""
+      
+      # Authentication
+      - key: AUTH_SECRET
+        sync: false
+      
+      # LangSmith configuration (optional)
+      - key: LANGSMITH_TRACING
+        value: "false"
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: LANGSMITH_PROJECT
+        value: "default"
+      
+      # Application mode
+      - key: MODE
+        value: "prod"
+      
+      # Database configuration
+      - key: DATABASE_TYPE
+        value: "sqlite"
+      - key: SQLITE_DB_PATH
+        value: ""
+      
+      # Optional Postgres configuration if needed
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        sync: false
+      - key: POSTGRES_DB
+        sync: false
+      
+      # OpenWeatherMap API key if needed
+      - key: OPENWEATHERMAP_API_KEY
+        sync: false
+      
+      # Azure OpenAI configuration if needed
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_OPENAI_API_VERSION
+        value: "2024-10-21" 
