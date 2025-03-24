@@ -96,8 +96,17 @@ async def _handle_input(
     run_id = uuid4()
     thread_id = user_input.thread_id or str(uuid4())
 
+    # Start with the base configurable (thread_id and model)
     configurable = {"thread_id": thread_id, "model": user_input.model}
+    
+    # Add character-specific config if available
+    if hasattr(agent, "character_config") and agent.character_config:
+        character_config = agent.character_config.get("configurable", {})
+        for key, value in character_config.items():
+            if key not in configurable:  # Don't override thread_id or model
+                configurable[key] = value
 
+    # Add user-provided agent config
     if user_input.agent_config:
         if overlap := configurable.keys() & user_input.agent_config.keys():
             raise HTTPException(

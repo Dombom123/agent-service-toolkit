@@ -132,6 +132,10 @@ async def main() -> None:
                 WELCOME = "Hello! I'm a simple chatbot. Ask me anything!"
             case "interrupt-agent":
                 WELCOME = "Hello! I'm an interrupt agent. Tell me your birthday and I will predict your personality!"
+            case "frank-character":
+                WELCOME = "Hey, was geht? Bin gerade etwas im Stress, aber für ein kurzes Gespräch bin ich zu haben."
+            case "lisa-character":
+                WELCOME = "Hi! Wie läuft's bei dir? Ich habe ein paar Minuten Zeit zum Quatschen."
             case "research-assistant":
                 WELCOME = "Hello! I'm an AI-powered research assistant with web search and a calculator. Ask me anything!"
             case _:
@@ -273,12 +277,35 @@ async def draw_messages(
 
                         # Expect one ToolMessage for each tool call.
                         for _ in range(len(call_results)):
-                            tool_result: ChatMessage = await anext(messages_agen)
-
-                            if tool_result.type != "tool":
-                                st.error(f"Unexpected ChatMessage type: {tool_result.type}")
-                                st.write(tool_result)
-                                st.stop()
+                            try:
+                                tool_result = None
+                                while True:
+                                    try:
+                                        next_result = await anext(messages_agen)
+                                        
+                                        # Skip string tokens until we get a proper message
+                                        if isinstance(next_result, str):
+                                            continue
+                                            
+                                        # Break once we have a proper tool message
+                                        if next_result.type == "tool":
+                                            tool_result = next_result
+                                            break
+                                            
+                                        # If we get a non-tool message, log it and keep looking
+                                        print(f"Unexpected message type in tool response stream: {next_result.type}")
+                                        
+                                    except StopAsyncIteration:
+                                        # No more messages
+                                        break
+                                        
+                                if not tool_result:
+                                    st.warning("Expected a tool response but didn't receive one")
+                                    break
+                                    
+                            except Exception as e:
+                                st.error(f"Error processing tool result: {e}")
+                                continue
 
                             # Record the message if it's new, and update the correct
                             # status container with the result

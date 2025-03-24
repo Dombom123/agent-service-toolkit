@@ -1,0 +1,51 @@
+Traceback (most recent call last):
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/src/run_service.py", line 22, in <module>
+    uvicorn.run("service:app", host=settings.HOST, port=settings.PORT, reload=settings.is_dev())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/env/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+    server.run()
+    ~~~~~~~~~~^^
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/env/lib/python3.13/site-packages/uvicorn/server.py", line 65, in run
+    return asyncio.run(self.serve(sockets=sockets))
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/env/lib/python3.13/site-packages/uvicorn/server.py", line 69, in serve
+    await self._serve(sockets)
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/env/lib/python3.13/site-packages/uvicorn/server.py", line 76, in _serve
+    config.load()
+    ~~~~~~~~~~~^^
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/env/lib/python3.13/site-packages/uvicorn/config.py", line 434, in load
+    self.loaded_app = import_from_string(self.app)
+                      ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/env/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+    raise exc from None
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/env/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/src/service/__init__.py", line 1, in <module>
+    from service.service import app
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/src/service/service.py", line 19, in <module>
+    from agents import DEFAULT_AGENT, get_agent, get_all_agent_info
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/src/agents/__init__.py", line 1, in <module>
+    from agents.agents import DEFAULT_AGENT, get_agent, get_all_agent_info
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/src/agents/agents.py", line 5, in <module>
+    from agents.character_agent import frank_agent, lisa_agent
+  File "/Users/dominikbohm/Documents/github/code/drivebeta/Langgraph/test01/agent-service-toolkit/src/agents/character_agent.py", line 9, in <module>
+    from langgraph.prebuilt.messages import MessagesState
+ModuleNotFoundError: No module named 'langgraph.prebuilt.messages'

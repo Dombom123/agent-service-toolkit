@@ -19,7 +19,7 @@ class OpenAIModelName(StrEnum):
 
     GPT_4O_MINI = "gpt-4o-mini"
     GPT_4O = "gpt-4o"
-
+    GPT_45_PREVIEW = "gpt-4.5-preview"
 
 class AzureOpenAIModelName(StrEnum):
     """Azure OpenAI model names"""
