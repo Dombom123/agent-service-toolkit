@@ -23,8 +23,8 @@ from schema.task_data import TaskData, TaskDataStatus
 # The app heavily uses AgentClient to interact with the agent's FastAPI endpoints.
 
 
-APP_TITLE = "Agent Service Toolkit"
-APP_ICON = "🧰"
+APP_TITLE = "AI Character Studio"
+APP_ICON = "🚀"
 
 
 async def main() -> None:
@@ -85,8 +85,8 @@ async def main() -> None:
     with st.sidebar:
         st.header(f"{APP_ICON} {APP_TITLE}")
 
-        ""
-        "Full toolkit for running an AI agent service built with LangGraph, FastAPI and Streamlit"
+        st.markdown("Simualtion der Charaktere aus *the other gAIrl*. Verfügbare Charaktere: Frank und Lisa. Auswahl über die Settings. Getestet mit GPT-4o.")
+
         if st.button("New Chat", use_container_width=True):
             st.session_state.clear()
             st.rerun()
