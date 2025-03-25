@@ -1,6 +1,7 @@
 import asyncio
 import os
 import urllib.parse
+import sys
 from collections.abc import AsyncGenerator
 
 import streamlit as st
@@ -11,6 +12,7 @@ from streamlit.runtime.scriptrunner import get_script_run_ctx
 from client import AgentClient, AgentClientError
 from schema import ChatHistory, ChatMessage
 from schema.task_data import TaskData, TaskDataStatus
+
 
 # A Streamlit app for interacting with the langgraph agent via a simple chat interface.
 # The app has three main functions which are all run async:
@@ -101,11 +103,9 @@ async def main() -> None:
                 index=agent_idx,
             )
             use_streaming = st.toggle("Stream results", value=True)
+        with st.popover(":material/chat: Prompts", use_container_width=True):
+            st.write("Prompts für die Charakter-Agents: [Link zu Google Doc](https://docs.google.com/document/d/110buzhhKP7RU_AraEZtNAzSrJr0ezTF5njuXnFRV5N4/edit?tab=t.0)")
 
-        with st.popover(":material/policy: Privacy", use_container_width=True):
-            st.write(
-                "Prompts, responses and feedback in this app are anonymously recorded and saved to LangSmith for product evaluation and improvement purposes only."
-            )
 
         @st.dialog("Share/resume chat")
         def share_chat_dialog() -> None:
