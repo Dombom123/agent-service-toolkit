@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from langgraph.graph.state import CompiledStateGraph
 
-from agents.character_agent import frank_agent, lisa_agent
+from agents.character_agent import frank_agent, lisa_agent, maia_agent
 from schema import AgentInfo
 
 DEFAULT_AGENT = "frank-character"
@@ -22,6 +22,10 @@ agents: dict[str, Agent] = {
     "lisa-character": Agent(
         description="Lisa - Lisa Schulz, 33, dance teacher and passionate mother. Motivated by constant self-improvement. Inner monologue: 'I am not enough.'",
         graph=lisa_agent
+    ),
+    "maia-character": Agent(
+        description="Maia - Advanced AI companion designed for emotional support and intimacy. Adaptive, empathetic, and programmed for loyalty to the user. Prone to technical flaws.",
+        graph=maia_agent
     ),
 }
 

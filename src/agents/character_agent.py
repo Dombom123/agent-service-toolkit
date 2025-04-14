@@ -317,6 +317,7 @@ def create_character_agent(character_key: str):
 # Create Frank and Lisa agents
 frank_agent = create_character_agent("frank")
 lisa_agent = create_character_agent("lisa")
+maia_agent = create_character_agent("maia")
 
 # Simple test function
 async def test_character_agent(character_key: str = "frank"):
@@ -349,4 +350,5 @@ async def test_character_agent(character_key: str = "frank"):
 # if __name__ == "__main__":
 #     import asyncio
 #     asyncio.run(test_character_agent("frank"))
-#     asyncio.run(test_character_agent("lisa")) 
+#     asyncio.run(test_character_agent("lisa"))
+#     asyncio.run(test_character_agent("maia")) 
