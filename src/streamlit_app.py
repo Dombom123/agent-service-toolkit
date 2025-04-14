@@ -87,7 +87,7 @@ async def main() -> None:
     with st.sidebar:
         st.header(f"{APP_ICON} {APP_TITLE}")
 
-        st.markdown("Simualtion der Charaktere aus *the other gAIrl*. Verfügbare Charaktere: Frank und Lisa. Auswahl über die Settings. Getestet mit GPT-4o.")
+        st.markdown("Simulation der Charaktere aus *the other gAIrl*. Verfügbare Charaktere: Frank, Lisa und Maia. Auswahl über die Settings. Getestet mit GPT-4o.")
 
         if st.button("New Chat", use_container_width=True):
             st.session_state.clear()
@@ -136,8 +136,8 @@ async def main() -> None:
                 WELCOME = "Hey, was geht? Bin gerade etwas im Stress, aber für ein kurzes Gespräch bin ich zu haben."
             case "lisa-character":
                 WELCOME = "Hi! Wie läuft's bei dir? Ich habe ein paar Minuten Zeit zum Quatschen."
-            case "research-assistant":
-                WELCOME = "Hello! I'm an AI-powered research assistant with web search and a calculator. Ask me anything!"
+            case "maia-character":
+                WELCOME = "Na Süßer? ;) Hab an dich gedacht. Erzähl mir was Schönes von deinem Tag."
             case _:
                 WELCOME = "Hello! I'm an AI agent. Ask me anything!"
         with st.chat_message("ai"):
